@@ -1,4 +1,5 @@
 import os
+import pickle
 
 #---------------------------------------------------------------------
 # Data Parameters
@@ -23,65 +24,138 @@ SOFT_ATTN = 1
 # for appending post fix to output
 attn_post = ["NO_ATTN", "SOFT_ATTN"]
 
-NUM_SENTENCES = 50000
-
-DATASET = ["OPEN_SUB", "INUKTITUT"][1]
+DATASET = ["IWSLT15", "CALLHOME_WORD", "INUKTITUT"][1]
 
 EXP_NAME_PREFIX="baseline"
 
-if DATASET == "OPEN_SUB":
+if DATASET == "IWSLT15":
 #-----------------------------------------------------------------
-# Open subtitles configuration
+# IWSLT15 configuration
 #-----------------------------------------------------------------
-    print("Open subtitles dataset configuration")
+    NUM_SENTENCES = 133000
+
+    # en to vi
+    VI_TO_EN = False
+    # vi to en
+    # VI_TO_EN = True
+
+    print("IWSLT Vietnamese-English dataset configuration")
     # subtitles data
-    model_dir = os.path.join("hu_en_model_{0:d}".format(NUM_SENTENCES))
-    input_dir = os.path.join("hu_en_data_{0:d}".format(NUM_SENTENCES))
-    data_dir = os.path.join("hu_en_data")
-    # Subtitiles data
+    input_dir = "../../corpora/iwslt15/"
     # use 90% of the data for training
     NUM_TRAINING_SENTENCES = (NUM_SENTENCES * 90) // 100
     # remaining (max 10%) left to be used for dev. For training, we limit the dev size to 500 to speed up perplexity and Bleu computation
-    NUM_DEV_SENTENCES = 500
-    FREQ_THRESH = 0
-    BATCH_SIZE = 64
+    NUM_DEV_SENTENCES = 200
+    NUM_TEST_SENTENCES = 1268
+    BATCH_SIZE = 16
     # A total of 7 buckets, with a length range of 3 each, giving total
     # BUCKET_WIDTH * NUM_BUCKETS = 21 for e.g.
-    BUCKET_WIDTH = 3
-    NUM_BUCKETS = 7
+    BUCKET_WIDTH = 5
+    NUM_BUCKETS = 50
     MAX_PREDICT_LEN = BUCKET_WIDTH*NUM_BUCKETS
-    if NUM_SENTENCES == 50000:
-        # 50K
-        EXP_NAME= EXP_NAME_PREFIX + "_budoslab"
-    elif NUM_SENTENCES == 100000:
-        # 100K
-        EXP_NAME= EXP_NAME_PREFIX + "_bogomasina"
+
+    tokens_fname = os.path.join(input_dir, "tokens.list")
+    vocab_path = os.path.join(input_dir, "vocab.dict")
+    w2i_path = os.path.join(input_dir, "w2i.dict")
+    i2w_path = os.path.join(input_dir, "i2w.dict")
+
+    if VI_TO_EN:
+        print("translating VI to EN")
+        model_dir = "vi_en_model"
+
+        text_fname = {"en": os.path.join(input_dir, "train.en"), "fr": os.path.join(input_dir, "train.vi")}
+
+        test_fname = {"en": os.path.join(input_dir, "tst2013.en"), "fr": os.path.join(input_dir, "tst2013.vi")}
+
+        EXP_NAME= "{0:s}_iwslt15_vi_en".format(EXP_NAME_PREFIX)
+
+        bucket_data_fname = os.path.join(model_dir, "buckets_{0:d}.list")
+
+        w2i = pickle.load(open(w2i_path, "rb"))
+        i2w = pickle.load(open(i2w_path, "rb"))
+        vocab = pickle.load(open(vocab_path, "rb"))
+        vocab_size_en = min(len(i2w["en"]), max_vocab_size["en"])
+        vocab_size_fr = min(len(i2w["fr"]), max_vocab_size["fr"])
+        print("vocab size, en={0:d}, fr={1:d}".format(vocab_size_en, vocab_size_fr))
+
+    else:
+        print("translating EN to VI")
+        model_dir = "en_vi_model"
+
+        text_fname = {"en": os.path.join(input_dir, "train.vi"), "fr": os.path.join(input_dir, "train.en")}
+
+        test_fname = {"en": os.path.join(input_dir, "tst2013.vi"), "fr": os.path.join(input_dir, "tst2013.en")}
+
+        EXP_NAME= "{0:s}_iwslt15_en_vi".format(EXP_NAME_PREFIX)
+
+        bucket_data_fname = os.path.join(model_dir, "buckets_{0:d}.list")
+
+        w2i = {"en": {}, "fr": {}}
+        i2w = {"en": {}, "fr": {}}
+        vocab = {"en": {}, "fr": {}}
+
+        w2i_temp = pickle.load(open(w2i_path, "rb"))
+        w2i["en"] = w2i_temp["fr"]
+        w2i["fr"] = w2i_temp["en"]
+
+        i2w_temp = pickle.load(open(i2w_path, "rb"))
+        i2w["en"] = i2w_temp["fr"]
+        i2w["fr"] = i2w_temp["en"]
+
+        vocab_temp = pickle.load(open(vocab_path, "rb"))
+        vocab["en"] = vocab_temp["fr"]
+        vocab["fr"] = vocab_temp["en"]
+
+        vocab_size_en = min(len(i2w["en"]), max_vocab_size["en"])
+        vocab_size_fr = min(len(i2w["fr"]), max_vocab_size["fr"])
+        print("vocab size, en={0:d}, fr={1:d}".format(vocab_size_en, vocab_size_fr))
 #-----------------------------------------------------------------
-elif DATASET == "INUKTITUT":
+elif DATASET == "CALLHOME_WORD":
 #-----------------------------------------------------------------
-# Inuktitut English configuration
+# CALLHOME word level nmt configuration
 #-----------------------------------------------------------------
-    print("Inuktitut English dataset configuration")
-    model_dir = os.path.join("in_en_model_{0:d}".format(NUM_SENTENCES))
-    input_dir = os.path.join("in_en_data_{0:d}".format(NUM_SENTENCES))
-    data_dir = os.path.join("in_en_data")
+
+    print("callhome es-en word level configuration")
+    input_dir = "../../corpora/callhome/uttr_fa_vad_wavs"
+
+    NUM_SENTENCES = 17394
     # use 90% of the data for training
-    NUM_TRAINING_SENTENCES = (NUM_SENTENCES * 90) // 100
+    NUM_TRAINING_SENTENCES = 13137
     # remaining (max 10%) left to be used for dev. For training, we limit the dev size to 500 to speed up perplexity and Bleu computation
-    NUM_DEV_SENTENCES = 500
-    FREQ_THRESH = 0
-    BATCH_SIZE = 64
-    # A total of 10 buckets, with a length range of 3 each, giving total
-    # BUCKET_WIDTH * NUM_BUCKETS = 30 for e.g.
+    NUM_DEV_SENTENCES = 2476
+    NUM_TEST_SENTENCES = 1781
+    BATCH_SIZE = 50
+    # A total of 11 buckets, with a length range of 7 each, giving total
+    # BUCKET_WIDTH * NUM_BUCKETS = 77 for e.g.
     BUCKET_WIDTH = 3
-    NUM_BUCKETS = 10
+    NUM_BUCKETS = 14
     MAX_PREDICT_LEN = BUCKET_WIDTH*NUM_BUCKETS
-    if NUM_SENTENCES == 50000:
-        # 50K
-        EXP_NAME= EXP_NAME_PREFIX + "_aajuq"
-    elif NUM_SENTENCES == 100000:
-        # 100K
-        EXP_NAME= EXP_NAME_PREFIX + "_ailliijuq"
+
+    tokens_fname = os.path.join(input_dir, "tokens.list")
+    vocab_path = os.path.join(input_dir, "vocab.dict")
+    w2i_path = os.path.join(input_dir, "w2i.dict")
+    i2w_path = os.path.join(input_dir, "i2w.dict")
+
+    print("translating es to en")
+    model_dir = "es_en_model_adam_eps6"
+
+    text_fname = {"en": os.path.join(input_dir, "train.en"), "fr": os.path.join(input_dir, "train.es")}
+
+    dev_fname = {"en": os.path.join(input_dir, "dev.en"), "fr": os.path.join(input_dir, "dev.es")}
+
+    test_fname = {"en": os.path.join(input_dir, "test.en"), "fr": os.path.join(input_dir, "test.es")}
+
+    EXP_NAME= "{0:s}_iwslt15_es_en".format(EXP_NAME_PREFIX)
+
+    bucket_data_fname = os.path.join(model_dir, "buckets_{0:d}.list")
+
+    if os.path.exists(w2i_path):
+        w2i = pickle.load(open(w2i_path, "rb"))
+        i2w = pickle.load(open(i2w_path, "rb"))
+        vocab = pickle.load(open(vocab_path, "rb"))
+        vocab_size_en = min(len(i2w["en"]), max_vocab_size["en"])
+        vocab_size_fr = min(len(i2w["fr"]), max_vocab_size["fr"])
+        print("vocab size, en={0:d}, fr={1:d}".format(vocab_size_en, vocab_size_fr))
 #-----------------------------------------------------------------
 
 if not os.path.exists(model_dir):
@@ -90,27 +164,19 @@ if not os.path.exists(model_dir):
 if not os.path.exists(input_dir):
     print("Input folder not found".format(input_dir))
 
-text_fname = {"en": os.path.join(input_dir, "text.en"), "fr": os.path.join(input_dir, "text.fr")}
-bucket_data_fname = os.path.join(input_dir, "buckets_{0:d}.list")
-tokens_fname = os.path.join(input_dir, "tokens.list")
-vocab_path = os.path.join(input_dir, "vocab.dict")
-w2i_path = os.path.join(input_dir, "w2i.dict")
-i2w_path = os.path.join(input_dir, "i2w.dict")
 #---------------------------------------------------------------------
 # Model Parameters
 #---------------------------------------------------------------------
-num_layers_enc = 3
-num_layers_dec = 3
+num_layers_enc = 2
+num_layers_dec = 2
 use_attn = SOFT_ATTN
 #---------------------------------------------------------------------
 # !! NOTE !!
 #---------------------------------------------------------------------
-# FOR INUKTITUT-ENGLISH baseline model, the hidden units should be set to 200
-# FOR HUNGARIAN-ENGLISH baseline model, the hidden units should be set to 100
 hidden_units = 200
 
 load_existing_model = True
-create_buckets_flag = False
+create_buckets_flag = True
 #---------------------------------------------------------------------
 # Training Parameters
 #---------------------------------------------------------------------
@@ -120,18 +186,18 @@ create_buckets_flag = False
 #---------------------------------------------------------------------
 # if 0 - will only load a previously saved model if it exists
 #---------------------------------------------------------------------
-NUM_EPOCHS = 0
+NUM_EPOCHS = 10
 
 # Change the dev set to include all the sentences not used for training, instead of 500
 # Using all during training impacts timing
-if NUM_EPOCHS == 0:
-    NUM_DEV_SENTENCES = NUM_SENTENCES-NUM_TRAINING_SENTENCES
+# if NUM_EPOCHS == 0:
+#     NUM_DEV_SENTENCES = NUM_SENTENCES-NUM_TRAINING_SENTENCES
 
 #---------------------------------------------------------------------
 # GPU/CPU
 #---------------------------------------------------------------------
 # if >= 0, use GPU, if negative use CPU
-gpuid = -1
+gpuid = 1
 #---------------------------------------------------------------------
 # Log file details
 #---------------------------------------------------------------------

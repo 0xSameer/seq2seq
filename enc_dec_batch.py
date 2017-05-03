@@ -80,6 +80,10 @@ class EncoderDecoder(Chain):
         xp = cuda.cupy if self.gpuid >= 0 else np
 
         # create masking array for pad id
+        if gpuid >= 0:
+            cuda.get_device(self.gpuid).use()
+
+        # create masking array for pad id
         self.mask_pad_id = xp.ones(vsize_dec, dtype=xp.float32)
         # make the class weight for pad id equal to 0
         # this way loss will not be computed for this predicted loss
@@ -111,7 +115,8 @@ class EncoderDecoder(Chain):
         # get embedding
         embed_id = embed_layer(word)
         # feed into first LSTM layer
-        hs = self[lstm_layer_list[0]](embed_id)
+        # hs = self[lstm_layer_list[0]](embed_id)
+        hs = F.dropout(self[lstm_layer_list[0]](embed_id), ratio=0.2, train=train)
         # feed into remaining LSTM layers
         for lstm_layer in lstm_layer_list[1:]:
             hs = F.dropout(self[lstm_layer](hs), ratio=0.2, train=train)
@@ -135,7 +140,6 @@ class EncoderDecoder(Chain):
                            volatile=(not train)))
 
         first_entry = True
-
 
         # encode tokens
         for f_word, r_word in zip(var_en, var_rev_en):
@@ -197,13 +201,13 @@ class EncoderDecoder(Chain):
         var_dec = (Variable(xp.asarray(decoder_word_list, dtype=np.int32).reshape((-1,1)),
                             volatile=not train))
         # Initialise first decoded word to GOID
-        pred_word = Variable(xp.asarray([GO_ID], dtype=np.int32), volatile=not train)
+        # pred_word = Variable(xp.asarray([GO_ID], dtype=np.int32), volatile=not train)
 
         # compute loss
         self.loss = 0
         # decode tokens
-        for next_word_var in var_dec[1:]:
-            self.decode(pred_word, train=train)
+        for curr_word_var, next_word_var in zip(var_dec, var_dec[1:]):
+            self.decode(curr_word_var, train=train)
             if self.attn:
                 cv, _ = self.compute_context_vector(batches=False)
                 cv_hdec = F.concat((cv, self[self.lstm_dec[-1]].h), axis=1)
@@ -212,9 +216,6 @@ class EncoderDecoder(Chain):
             else:
                 predicted_out = self.out(self[self.lstm_dec[-1]].h)
             # compute loss
-            prob = F.softmax(predicted_out)
-            pred_word = F.argmax(prob)
-            pred_word = Variable(xp.asarray([pred_word.data], dtype=np.int32), volatile=not train)
             self.loss += F.softmax_cross_entropy(predicted_out, next_word_var)
         report({"loss":self.loss},self)
 
@@ -223,7 +224,7 @@ class EncoderDecoder(Chain):
     #--------------------------------------------------------------------
     # For SGD - Batch size = 1
     #--------------------------------------------------------------------
-    def decoder_predict(self, start_word, max_predict_len=20):
+    def decoder_predict(self, start_word, max_predict_len=MAX_PREDICT_LEN):
         xp = cuda.cupy if self.gpuid >= 0 else np
         alpha_arr = xp.empty((0,self.enc_states.shape[0]), dtype=xp.float32)
 
@@ -348,16 +349,12 @@ class EncoderDecoder(Chain):
         # convert list of tokens into chainer variable list
         var_dec = (Variable(decoder_batch.T, volatile=(not train)))
 
-        # Initialise first decoded word to GOID
-        pred_word = var_dec[0]
-
         loss = 0
 
-        seq_len, batch_size = var_dec.shape
         # for all sequences in the batch, feed the characters one by one
-        for i in range(1, seq_len):
+        for curr_word, next_word in zip(var_dec, var_dec[1:]):
             # encode tokens
-            self.decode(pred_word, train)
+            self.decode(curr_word, train)
 
             if self.attn:
                 cv, _ = self.compute_context_vector()
@@ -367,11 +364,7 @@ class EncoderDecoder(Chain):
             else:
                 predicted_out = self.out(self[self.lstm_dec[-1]].h)
 
-            prob = F.softmax(predicted_out)
-            pred_word = F.expand_dims(F.argmax(prob, axis=1), -1)
-
-            w = var_dec[i]
-            loss_arr = F.softmax_cross_entropy(predicted_out, w,
+            loss_arr = F.softmax_cross_entropy(predicted_out, next_word,
                                                class_weight=self.mask_pad_id)
             loss += loss_arr
 
