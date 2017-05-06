@@ -124,7 +124,7 @@ elif DATASET == "CALLHOME_WORD":
     # remaining (max 10%) left to be used for dev. For training, we limit the dev size to 500 to speed up perplexity and Bleu computation
     NUM_DEV_SENTENCES = 2476
     NUM_TEST_SENTENCES = 1781
-    BATCH_SIZE = 50
+    BATCH_SIZE = 40
     # A total of 11 buckets, with a length range of 7 each, giving total
     # BUCKET_WIDTH * NUM_BUCKETS = 77 for e.g.
     BUCKET_WIDTH = 3
@@ -137,7 +137,7 @@ elif DATASET == "CALLHOME_WORD":
     i2w_path = os.path.join(input_dir, "i2w.dict")
 
     print("translating es to en")
-    model_dir = "es_en_model_adam_eps6"
+    model_dir = "es_en_model_adam_eps6_h300"
 
     text_fname = {"en": os.path.join(input_dir, "train.en"), "fr": os.path.join(input_dir, "train.es")}
 
@@ -145,7 +145,7 @@ elif DATASET == "CALLHOME_WORD":
 
     test_fname = {"en": os.path.join(input_dir, "test.en"), "fr": os.path.join(input_dir, "test.es")}
 
-    EXP_NAME= "{0:s}_iwslt15_es_en".format(EXP_NAME_PREFIX)
+    EXP_NAME= "{0:s}_callhome_es_en".format(EXP_NAME_PREFIX)
 
     bucket_data_fname = os.path.join(model_dir, "buckets_{0:d}.list")
 
@@ -167,16 +167,16 @@ if not os.path.exists(input_dir):
 #---------------------------------------------------------------------
 # Model Parameters
 #---------------------------------------------------------------------
-num_layers_enc = 2
-num_layers_dec = 2
+num_layers_enc = 4
+num_layers_dec = 4
 use_attn = SOFT_ATTN
 #---------------------------------------------------------------------
 # !! NOTE !!
 #---------------------------------------------------------------------
-hidden_units = 200
+hidden_units = 512
 
 load_existing_model = True
-create_buckets_flag = True
+create_buckets_flag = False
 #---------------------------------------------------------------------
 # Training Parameters
 #---------------------------------------------------------------------
@@ -186,7 +186,7 @@ create_buckets_flag = True
 #---------------------------------------------------------------------
 # if 0 - will only load a previously saved model if it exists
 #---------------------------------------------------------------------
-NUM_EPOCHS = 10
+NUM_EPOCHS = 0
 
 # Change the dev set to include all the sentences not used for training, instead of 500
 # Using all during training impacts timing

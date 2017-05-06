@@ -78,12 +78,12 @@ if gpuid >= 0:
     model.to_gpu()
 
 # optimizer = optimizers.Adam()
-optimizer = optimizers.Adam(alpha=0.001, beta1=0.9, beta2=0.999, eps=1e-06)
-# optimizer = optimizers.SGD(lr=0.001)
+# optimizer = optimizers.Adam(alpha=0.001, beta1=0.9, beta2=0.999, eps=1e-08)
+optimizer = optimizers.SGD(lr=0.001)
 optimizer.setup(model)
 # gradient clipping
 optimizer.add_hook(chainer.optimizer.GradientClipping(threshold=5))
-# optimizer.add_hook(chainer.optimizer.WeightDecay(0.5))
+# optimizer.add_hook(chainer.optimizer.WeightDecay(0.0001))
 
 
 # In[ ]:
@@ -669,14 +669,14 @@ def predict_sentence(line_num, line_fr, line_en=None, display=True, plot_name=No
 # In[ ]:
 
 
-def predict(s=NUM_TRAINING_SENTENCES, num=NUM_DEV_SENTENCES, display=True, plot=False, p_filt=0, r_filt=0):
+def predict(s=NUM_TRAINING_SENTENCES, num=NUM_DEV_SENTENCES, display=True, plot=False, p_filt=0, r_filt=0, fil_name=text_fname):
     print("English predictions, s={0:d}, num={1:d}:".format(s, num))
 
     metrics = {"cp":[], "tp":[], "t":[]}
 
     filter_count = 0
 
-    with open(text_fname["fr"], "rb") as fr_file, open(text_fname["en"], "rb") as en_file:
+    with open(fil_name["fr"], "rb") as fr_file, open(fil_name["en"], "rb") as en_file:
         for i, (line_fr, line_en) in enumerate(zip(fr_file, en_file), start=0):
             if i >= s and i < (s+num):
                 if plot:
