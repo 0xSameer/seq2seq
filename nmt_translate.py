@@ -78,7 +78,7 @@ if gpuid >= 0:
     model.to_gpu()
 
 # optimizer = optimizers.Adam()
-# optimizer = optimizers.Adam(alpha=0.001, beta1=0.9, beta2=0.999, eps=1e-08)
+# optimizer = optimizers.Adam(alpha=0.0005, beta1=0.9, beta2=0.999, eps=1e-08)
 optimizer = optimizers.SGD(lr=0.001)
 optimizer.setup(model)
 # gradient clipping
@@ -102,8 +102,12 @@ def create_buckets():
             if i > NUM_TRAINING_SENTENCES:
                 break
             else:
-                fr_sent = line_fr.strip().split()
-                en_sent = line_en.strip().split()
+                if not CHAR_LEVEL:
+                    fr_sent = line_fr.strip().split()
+                    en_sent = line_en.strip().split()
+                else:
+                    fr_sent = [c.encode() for c in list(line_fr.strip().decode())]
+                    en_sent = [c.encode() for c in list(line_en.strip().decode())]
 
                 if len(fr_sent) > 0 and len(en_sent) > 0:
                     max_len = min(max(len(fr_sent), len(en_sent)),
@@ -137,46 +141,6 @@ def compute_prec_recall():
     print("{0:s} | {1:0.4f}".format("recall", rec))
     print("{0:s} | {1:0.4f}".format("f1", f_score))
 
-# In[ ]:
-def compute_dev_pplx():
-    loss = 0
-    num_words = 0
-    with open(text_fname["fr"], "rb") as fr_file, open(text_fname["en"], "rb") as en_file:
-        with tqdm(total=NUM_DEV_SENTENCES) as pbar:
-            sys.stderr.flush()
-            out_str = "loss={0:.6f}".format(0)
-            pbar.set_description(out_str)
-            for i, (line_fr, line_en) in enumerate(zip(fr_file, en_file), start=1):
-                if i > NUM_TRAINING_SENTENCES and i <= (NUM_TRAINING_SENTENCES + NUM_DEV_SENTENCES):
-                    fr_sent = line_fr.strip().split()
-                    en_sent = line_en.strip().split()
-
-                    fr_ids = [w2i["fr"].get(w, UNK_ID) for w in fr_sent]
-                    en_ids = [w2i["en"].get(w, UNK_ID) for w in en_sent]
-
-                    if len(fr_ids) > 0 and len(en_ids) > 0:
-                        # compute loss
-                        curr_loss = float(model.encode_decode_train(fr_ids, en_ids, train=False).data)
-                        loss += curr_loss
-                        num_words += len(en_ids)
-
-                        out_str = "loss={0:.6f}".format(curr_loss)
-                        pbar.set_description(out_str)
-                    pbar.update(1)
-
-            # end of for
-        # end of pbar
-    # end of with open file
-    loss_per_word = loss / num_words
-    pplx = 2 ** loss_per_word
-    random_pplx = vocab_size_en
-
-    print("{0:s}".format("-"*50))
-    print("{0:s} | {1:0.6f}".format("dev perplexity", pplx))
-    print("{0:s}".format("-"*50))
-
-    return pplx
-
 
 def compute_pplx(src_fname, tar_fname, num_sent):
     loss = 0
@@ -192,8 +156,12 @@ def compute_pplx(src_fname, tar_fname, num_sent):
                 if i > num_sent:
                     break
 
-                fr_sent = line_fr.strip().split()
-                en_sent = line_en.strip().split()
+                if not CHAR_LEVEL:
+                    fr_sent = line_fr.strip().split()
+                    en_sent = line_en.strip().split()
+                else:
+                    fr_sent = [c.encode() for c in list(line_fr.strip().decode())]
+                    en_sent = [c.encode() for c in list(line_en.strip().decode())]
 
                 fr_ids = [w2i["fr"].get(w, UNK_ID) for w in fr_sent]
                 en_ids = [w2i["en"].get(w, UNK_ID) for w in en_sent]
@@ -246,41 +214,6 @@ def bleu(stats):
     log_bleu_prec = sum([math.log(float(x)/y) for x,y in zip(stats[2::2],stats[3::2])]) / 4.
     return math.exp(min([0, 1-float(r)/c]) + log_bleu_prec)
 
-def compute_dev_bleu():
-    list_of_references = []
-    list_of_hypotheses = []
-    with open(text_fname["fr"], "rb") as fr_file, open(text_fname["en"], "rb") as en_file:
-        with tqdm(total=NUM_DEV_SENTENCES) as pbar:
-            sys.stderr.flush()
-            for i, (line_fr, line_en) in enumerate(zip(fr_file, en_file), start=1):
-                if i > NUM_TRAINING_SENTENCES and i <= (NUM_TRAINING_SENTENCES + NUM_DEV_SENTENCES):
-
-                    out_str = "predicting sentence={0:d}".format(i)
-                    pbar.update(1)
-
-                    fr_sent = line_fr.strip().split()
-                    en_sent = line_en.strip().split()
-
-                    fr_ids = [w2i["fr"].get(w, UNK_ID) for w in fr_sent]
-                    en_ids = [w2i["en"].get(w, UNK_ID) for w in en_sent]
-
-                    reference_words = [w.decode() for w in line_en.strip().split()]
-                    list_of_references.append(reference_words)
-                    if len(fr_ids) > 0 and len(en_ids) > 0:
-                        pred_sent, _ = model.encode_decode_predict(fr_ids)
-                        pred_words = [i2w["en"][w].decode() for w in pred_sent if w != EOS_ID]
-                    else:
-                        pred_words = []
-                    list_of_hypotheses.append(pred_words)
-                if i > (NUM_TRAINING_SENTENCES + NUM_DEV_SENTENCES):
-                    break
-
-    stats = [0 for i in range(10)]
-    for (r,h) in zip(list_of_references, list_of_hypotheses):
-        stats = [sum(scores) for scores in zip(stats, bleu_stats(h,r))]
-    print("BLEU: %0.2f" % (100 * bleu(stats)))
-
-    return (100 * bleu(stats))
 
 def compute_bleu(src_fname, tar_fname, num_sent):
     list_of_references = []
@@ -295,17 +228,25 @@ def compute_bleu(src_fname, tar_fname, num_sent):
                 out_str = "predicting sentence={0:d}".format(i)
                 pbar.update(1)
 
-                fr_sent = line_fr.strip().split()
+                if not CHAR_LEVEL:
+                    fr_sent = line_fr.strip().split()
+                else:
+                    fr_sent = [c.encode() for c in list(line_fr.strip().decode())]
+
                 en_sent = line_en.strip().split()
 
                 fr_ids = [w2i["fr"].get(w, UNK_ID) for w in fr_sent]
-                en_ids = [w2i["en"].get(w, UNK_ID) for w in en_sent]
 
                 reference_words = [w.decode() for w in line_en.strip().split()]
                 list_of_references.append(reference_words)
-                if len(fr_ids) > 0 and len(en_ids) > 0:
+                if len(fr_ids) > 0 and len(en_sent) > 0:
                     pred_sent, _ = model.encode_decode_predict(fr_ids)
+
                     pred_words = [i2w["en"][w].decode() for w in pred_sent if w != EOS_ID]
+                    if CHAR_LEVEL:
+                        pred_words = "".join(pred_words)
+                        pred_words = pred_words.split()
+                    
                 else:
                     pred_words = []
                 list_of_hypotheses.append(pred_words)
@@ -472,13 +413,12 @@ def batch_train_loop(bucket_fname, num_epochs,
                     if train_count >= num_training:
                         break
                     next_batch_end = min(batch_size, (num_training-train_count))
-                    #print("current batch")
-                    #print(bucket_data[i:i+next_batch_end])
-                    #print("bucket limit", buck_pad_lim)
+                    # print("current batch")
+                    # print(bucket_data[i:i+next_batch_end])
+                    # print("bucket limit", buck_pad_lim)
                     curr_len = len(bucket_data[i:i+next_batch_end])
 
-                    loss = model.encode_decode_train_batch(bucket_data[i:i+next_batch_end],
-                                                          buck_pad_lim, buck_pad_lim)
+                    loss = model.encode_decode_train_batch(bucket_data[i:i+next_batch_end], buck_pad_lim, buck_pad_lim)
                     train_count += curr_len
 
                     # set up for backprop
@@ -508,9 +448,13 @@ def batch_train_loop(bucket_fname, num_epochs,
         print("{0:s}".format("-"*50))
         print("computing perplexity")
         # pplx_new = compute_dev_pplx()
-        pplx_new = compute_pplx(dev_fname["fr"], dev_fname["en"], 200)
+        pplx_new = compute_pplx(dev_fname["fr"], dev_fname["en"], NUM_MINI_DEV_SENTENCES)
+
+        if pplx_new > pplx:
+            print("perplexity went up during training, breaking out of loop")
+            break
         
-        if (epoch+1) % 5 == 0:
+        if (epoch+1) % ITERS_TO_SAVE == 0:
             print("Saving model")
             serializers.save_npz(model_fil.replace(".model", "_{0:d}.model".format(last_epoch_id+epoch+1)), model)
             print("Finished saving model")
@@ -520,8 +464,8 @@ def batch_train_loop(bucket_fname, num_epochs,
         print(log_dev_fil_name)
         print(model_fil.replace(".model", "_{0:d}.model".format(epoch+1)))
 
-        if epoch % 2 == 0:
-            bleu_score = compute_bleu(dev_fname["fr"], dev_fname["en"], 200)
+        if (epoch+1) % ITERS_TO_SAVE == 0:
+            bleu_score = compute_bleu(dev_fname["fr"], dev_fname["en"], NUM_MINI_DEV_SENTENCES)
 
         # log pplx and bleu score
         log_dev_csv.writerow([(last_epoch_id+epoch+1), pplx_new, bleu_score])
@@ -533,9 +477,9 @@ def batch_train_loop(bucket_fname, num_epochs,
     print("Simple predictions (╯°□°）╯︵ ┻━┻")
     print("dev set predictions")
     _ = predict(s=NUM_TRAINING_SENTENCES, num=3, plot=False)
-    print("{0:s}".format("-"*50))
-    compute_bleu(dev_fname["fr"], dev_fname["en"], 200)
-    print("{0:s}".format("-"*50))
+    # print("{0:s}".format("-"*50))
+    # compute_bleu(dev_fname["fr"], dev_fname["en"], NUM_MINI_DEV_SENTENCES)
+    # print("{0:s}".format("-"*50))
 
     print("Final saving model")
     serializers.save_npz(model_fil, model)
@@ -622,15 +566,21 @@ def plot_attention(alpha_arr, fr, en, plot_name=None):
 # In[ ]:
 
 def predict_sentence(line_num, line_fr, line_en=None, display=True, plot_name=None, p_filt=0, r_filt=0):
-    fr_sent = line_fr.strip().split()
+    if not CHAR_LEVEL:
+        fr_sent = line_fr.strip().split()
+    else:
+        fr_sent = [c.encode() for c in list(line_fr.strip().decode())]
     fr_ids = [w2i["fr"].get(w, UNK_ID) for w in fr_sent]
+
     # english reference is optional. If provided, compute precision/recall
     if line_en:
         en_sent = line_en.strip().split()
         en_ids = [w2i["en"].get(w, UNK_ID) for w in en_sent]
 
     pred_ids, alpha_arr = model.encode_decode_predict(fr_ids)
-    pred_words = [i2w["en"][w].decode() for w in pred_ids]
+    pred_words = [i2w["en"][w].decode() if w != EOS_ID else " _EOS" for w in pred_ids]
+    # print(pred_ids)
+    # print(pred_words)
 
     prec = 0
     rec = 0
@@ -648,21 +598,25 @@ def predict_sentence(line_num, line_fr, line_en=None, display=True, plot_name=No
     if display and (prec >= p_filt and rec >= r_filt):
         filter_match = True
         # convert raw binary into string
-        fr_words = [w.decode() for w in fr_sent]
+        # fr_words = [w.decode() for w in fr_sent]
 
         print("{0:s}".format("-"*50))
         print("sentence: {0:d}".format(line_num))
         print("{0:s} | {1:80s}".format("Src", line_fr.strip().decode()))
         print("{0:s} | {1:80s}".format("Ref", line_en.strip().decode()))
-        print("{0:s} | {1:80s}".format("Hyp", " ".join(pred_words)))
+        
+        if not CHAR_LEVEL:
+            print("{0:s} | {1:80s}".format("Hyp", " ".join(pred_words)))
+        else:
+            print("{0:s} | {1:80s}".format("Hyp", "".join(pred_words)))
 
         print("{0:s}".format("-"*50))
 
         print("{0:s} | {1:0.4f}".format("precision", prec))
         print("{0:s} | {1:0.4f}".format("recall", rec))
 
-        if plot_name and use_attn:
-            plot_attention(alpha_arr, fr_words, pred_words, plot_name)
+        # if plot_name and use_attn:
+        #     plot_attention(alpha_arr, fr_words, pred_words, plot_name)
 
     return matches, len(pred_ids), len(en_ids), filter_match
 
@@ -722,7 +676,7 @@ def count_match(list1, list2):
 
 # model, optimizer = setup_model()
 
-def main():
+def training(epochs=NUM_EPOCHS):
     print("here", os.path.exists(model_fil))
     if create_buckets_flag:
         create_buckets()
@@ -750,21 +704,24 @@ def main():
             print("""model file already exists!!
                 Delete before continuing, or enable load_existing flag""".format(model_fil))
             return
-    if NUM_EPOCHS > 0:
+    if epochs > 0:
         #train_loop(text_fname, NUM_TRAINING_SENTENCES, NUM_EPOCHS)
         batch_train_loop(bucket_data_fname,
-                 num_epochs=NUM_EPOCHS,
+                 num_epochs=epochs,
                  batch_size=BATCH_SIZE,
                  num_buckets=NUM_BUCKETS,
                  num_training=NUM_TRAINING_SENTENCES,
                  bucket_width=BUCKET_WIDTH, last_epoch_id=max_epoch_id)
         # compute_pplx(dev_fname["fr"], dev_fname["en"], NUM_DEV_SENTENCES)
         # compute_bleu(dev_fname["fr"], dev_fname["en"], NUM_DEV_SENTENCES)
-        compute_pplx(dev_fname["fr"], dev_fname["en"], 200)
-        compute_bleu(dev_fname["fr"], dev_fname["en"], 200)
+        # compute_pplx(dev_fname["fr"], dev_fname["en"], NUM_MINI_DEV_SENTENCES)
+        # compute_bleu(dev_fname["fr"], dev_fname["en"], NUM_MINI_DEV_SENTENCES)
+
+
+def main():
+    training(NUM_EPOCHS)
 
 
 if __name__ == "__main__":
     main()
-
 

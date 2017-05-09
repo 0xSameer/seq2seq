@@ -266,7 +266,7 @@ class EncoderDecoder(Chain):
     #--------------------------------------------------------------------
     # For SGD - Batch size = 1
     #--------------------------------------------------------------------
-    def encode_decode_predict(self, in_word_list, max_predict_len=20):
+    def encode_decode_predict(self, in_word_list, max_predict_len=MAX_PREDICT_LEN):
         xp = cuda.cupy if self.gpuid >= 0 else np
         self.reset_state()
         # encode list of words/tokens

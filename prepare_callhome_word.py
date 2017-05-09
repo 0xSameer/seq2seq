@@ -25,10 +25,14 @@ def create_vocab(text_fname):
     with open(text_fname,"rb") as in_f:
         for i, line in enumerate(in_f):
             word = line.strip()
+
             if word in vocab:
                 vocab[word] += 1
             else:
                 vocab[word] = 1
+
+    if CHAR_LEVEL:
+        vocab[b' '] = 1
     
     print("vocab length: {0:d}".format(len(vocab)))
     
@@ -47,12 +51,12 @@ def create_vocab(text_fname):
 # In[ ]:
 
 def create_input_config():
-    en_name = os.path.join(input_dir, "vocab.en")
-    fr_name = os.path.join(input_dir, "vocab.es")
+    en_name = os.path.join(input_dir, "vocab.en" if not CHAR_LEVEL else "char_vocab.en")
+    fr_name = os.path.join(input_dir, "vocab.es" if not CHAR_LEVEL else "char_vocab.es")
     
-    vocab_path = os.path.join(input_dir, "vocab.dict")
-    w2i_path = os.path.join(input_dir, "w2i.dict")
-    i2w_path = os.path.join(input_dir, "i2w.dict")
+    # vocab_path = os.path.join(input_dir, "vocab.dict")
+    # w2i_path = os.path.join(input_dir, "w2i.dict")
+    # i2w_path = os.path.join(input_dir, "i2w.dict")
     
     # create vocabularies
     vocab = {"en":{}, "fr":{}}

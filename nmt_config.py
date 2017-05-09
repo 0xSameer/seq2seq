@@ -32,83 +32,84 @@ if DATASET == "IWSLT15":
 #-----------------------------------------------------------------
 # IWSLT15 configuration
 #-----------------------------------------------------------------
-    NUM_SENTENCES = 133000
+    pass
+    # NUM_SENTENCES = 133000
 
-    # en to vi
-    VI_TO_EN = False
-    # vi to en
-    # VI_TO_EN = True
+    # # en to vi
+    # VI_TO_EN = False
+    # # vi to en
+    # # VI_TO_EN = True
 
-    print("IWSLT Vietnamese-English dataset configuration")
-    # subtitles data
-    input_dir = "../../corpora/iwslt15/"
-    # use 90% of the data for training
-    NUM_TRAINING_SENTENCES = (NUM_SENTENCES * 90) // 100
-    # remaining (max 10%) left to be used for dev. For training, we limit the dev size to 500 to speed up perplexity and Bleu computation
-    NUM_DEV_SENTENCES = 200
-    NUM_TEST_SENTENCES = 1268
-    BATCH_SIZE = 16
-    # A total of 7 buckets, with a length range of 3 each, giving total
-    # BUCKET_WIDTH * NUM_BUCKETS = 21 for e.g.
-    BUCKET_WIDTH = 5
-    NUM_BUCKETS = 50
-    MAX_PREDICT_LEN = BUCKET_WIDTH*NUM_BUCKETS
+    # print("IWSLT Vietnamese-English dataset configuration")
+    # # subtitles data
+    # input_dir = "../../corpora/iwslt15/"
+    # # use 90% of the data for training
+    # NUM_TRAINING_SENTENCES = (NUM_SENTENCES * 90) // 100
+    # # remaining (max 10%) left to be used for dev. For training, we limit the dev size to 500 to speed up perplexity and Bleu computation
+    # NUM_DEV_SENTENCES = 200
+    # NUM_TEST_SENTENCES = 1268
+    # BATCH_SIZE = 16
+    # # A total of 7 buckets, with a length range of 3 each, giving total
+    # # BUCKET_WIDTH * NUM_BUCKETS = 21 for e.g.
+    # BUCKET_WIDTH = 5
+    # NUM_BUCKETS = 50
+    # MAX_PREDICT_LEN = BUCKET_WIDTH*NUM_BUCKETS
 
-    tokens_fname = os.path.join(input_dir, "tokens.list")
-    vocab_path = os.path.join(input_dir, "vocab.dict")
-    w2i_path = os.path.join(input_dir, "w2i.dict")
-    i2w_path = os.path.join(input_dir, "i2w.dict")
+    # tokens_fname = os.path.join(input_dir, "tokens.list")
+    # vocab_path = os.path.join(input_dir, "vocab.dict")
+    # w2i_path = os.path.join(input_dir, "w2i.dict")
+    # i2w_path = os.path.join(input_dir, "i2w.dict")
 
-    if VI_TO_EN:
-        print("translating VI to EN")
-        model_dir = "vi_en_model"
+    # if VI_TO_EN:
+    #     print("translating VI to EN")
+    #     model_dir = "vi_en_model"
 
-        text_fname = {"en": os.path.join(input_dir, "train.en"), "fr": os.path.join(input_dir, "train.vi")}
+    #     text_fname = {"en": os.path.join(input_dir, "train.en"), "fr": os.path.join(input_dir, "train.vi")}
 
-        test_fname = {"en": os.path.join(input_dir, "tst2013.en"), "fr": os.path.join(input_dir, "tst2013.vi")}
+    #     test_fname = {"en": os.path.join(input_dir, "tst2013.en"), "fr": os.path.join(input_dir, "tst2013.vi")}
 
-        EXP_NAME= "{0:s}_iwslt15_vi_en".format(EXP_NAME_PREFIX)
+    #     EXP_NAME= "{0:s}_iwslt15_vi_en".format(EXP_NAME_PREFIX)
 
-        bucket_data_fname = os.path.join(model_dir, "buckets_{0:d}.list")
+    #     bucket_data_fname = os.path.join(model_dir, "buckets_{0:d}.list")
 
-        w2i = pickle.load(open(w2i_path, "rb"))
-        i2w = pickle.load(open(i2w_path, "rb"))
-        vocab = pickle.load(open(vocab_path, "rb"))
-        vocab_size_en = min(len(i2w["en"]), max_vocab_size["en"])
-        vocab_size_fr = min(len(i2w["fr"]), max_vocab_size["fr"])
-        print("vocab size, en={0:d}, fr={1:d}".format(vocab_size_en, vocab_size_fr))
+    #     w2i = pickle.load(open(w2i_path, "rb"))
+    #     i2w = pickle.load(open(i2w_path, "rb"))
+    #     vocab = pickle.load(open(vocab_path, "rb"))
+    #     vocab_size_en = min(len(i2w["en"]), max_vocab_size["en"])
+    #     vocab_size_fr = min(len(i2w["fr"]), max_vocab_size["fr"])
+    #     print("vocab size, en={0:d}, fr={1:d}".format(vocab_size_en, vocab_size_fr))
 
-    else:
-        print("translating EN to VI")
-        model_dir = "en_vi_model"
+    # else:
+    #     print("translating EN to VI")
+    #     model_dir = "en_vi_model"
 
-        text_fname = {"en": os.path.join(input_dir, "train.vi"), "fr": os.path.join(input_dir, "train.en")}
+    #     text_fname = {"en": os.path.join(input_dir, "train.vi"), "fr": os.path.join(input_dir, "train.en")}
 
-        test_fname = {"en": os.path.join(input_dir, "tst2013.vi"), "fr": os.path.join(input_dir, "tst2013.en")}
+    #     test_fname = {"en": os.path.join(input_dir, "tst2013.vi"), "fr": os.path.join(input_dir, "tst2013.en")}
 
-        EXP_NAME= "{0:s}_iwslt15_en_vi".format(EXP_NAME_PREFIX)
+    #     EXP_NAME= "{0:s}_iwslt15_en_vi".format(EXP_NAME_PREFIX)
 
-        bucket_data_fname = os.path.join(model_dir, "buckets_{0:d}.list")
+    #     bucket_data_fname = os.path.join(model_dir, "buckets_{0:d}.list")
 
-        w2i = {"en": {}, "fr": {}}
-        i2w = {"en": {}, "fr": {}}
-        vocab = {"en": {}, "fr": {}}
+    #     w2i = {"en": {}, "fr": {}}
+    #     i2w = {"en": {}, "fr": {}}
+    #     vocab = {"en": {}, "fr": {}}
 
-        w2i_temp = pickle.load(open(w2i_path, "rb"))
-        w2i["en"] = w2i_temp["fr"]
-        w2i["fr"] = w2i_temp["en"]
+    #     w2i_temp = pickle.load(open(w2i_path, "rb"))
+    #     w2i["en"] = w2i_temp["fr"]
+    #     w2i["fr"] = w2i_temp["en"]
 
-        i2w_temp = pickle.load(open(i2w_path, "rb"))
-        i2w["en"] = i2w_temp["fr"]
-        i2w["fr"] = i2w_temp["en"]
+    #     i2w_temp = pickle.load(open(i2w_path, "rb"))
+    #     i2w["en"] = i2w_temp["fr"]
+    #     i2w["fr"] = i2w_temp["en"]
 
-        vocab_temp = pickle.load(open(vocab_path, "rb"))
-        vocab["en"] = vocab_temp["fr"]
-        vocab["fr"] = vocab_temp["en"]
+    #     vocab_temp = pickle.load(open(vocab_path, "rb"))
+    #     vocab["en"] = vocab_temp["fr"]
+    #     vocab["fr"] = vocab_temp["en"]
 
-        vocab_size_en = min(len(i2w["en"]), max_vocab_size["en"])
-        vocab_size_fr = min(len(i2w["fr"]), max_vocab_size["fr"])
-        print("vocab size, en={0:d}, fr={1:d}".format(vocab_size_en, vocab_size_fr))
+    #     vocab_size_en = min(len(i2w["en"]), max_vocab_size["en"])
+    #     vocab_size_fr = min(len(i2w["fr"]), max_vocab_size["fr"])
+    #     print("vocab size, en={0:d}, fr={1:d}".format(vocab_size_en, vocab_size_fr))
 #-----------------------------------------------------------------
 elif DATASET == "CALLHOME_WORD":
 #-----------------------------------------------------------------
@@ -118,26 +119,30 @@ elif DATASET == "CALLHOME_WORD":
     print("callhome es-en word level configuration")
     input_dir = "../../corpora/callhome/uttr_fa_vad_wavs"
 
+    CHAR_LEVEL = True
+
     NUM_SENTENCES = 17394
     # use 90% of the data for training
     NUM_TRAINING_SENTENCES = 13137
+    # NUM_TRAINING_SENTENCES = 1000
     # remaining (max 10%) left to be used for dev. For training, we limit the dev size to 500 to speed up perplexity and Bleu computation
+    NUM_MINI_DEV_SENTENCES = 200
+    ITERS_TO_SAVE = 5
     NUM_DEV_SENTENCES = 2476
     NUM_TEST_SENTENCES = 1781
-    BATCH_SIZE = 40
+    BATCH_SIZE = 20
     # A total of 11 buckets, with a length range of 7 each, giving total
     # BUCKET_WIDTH * NUM_BUCKETS = 77 for e.g.
-    BUCKET_WIDTH = 3
-    NUM_BUCKETS = 14
+    BUCKET_WIDTH = 3 if not CHAR_LEVEL else 3
+    NUM_BUCKETS = 14 if not CHAR_LEVEL else 30
     MAX_PREDICT_LEN = BUCKET_WIDTH*NUM_BUCKETS
 
-    tokens_fname = os.path.join(input_dir, "tokens.list")
-    vocab_path = os.path.join(input_dir, "vocab.dict")
-    w2i_path = os.path.join(input_dir, "w2i.dict")
-    i2w_path = os.path.join(input_dir, "i2w.dict")
+    vocab_path = os.path.join(input_dir, "vocab.dict" if not CHAR_LEVEL else "char_vocab.dict")
+    w2i_path = os.path.join(input_dir, "w2i.dict" if not CHAR_LEVEL else "char_w2i.dict")
+    i2w_path = os.path.join(input_dir, "i2w.dict" if not CHAR_LEVEL else "char_i2w.dict")
 
     print("translating es to en")
-    model_dir = "es_en_model_adam_eps6_h300"
+    model_dir = "es_en_model_char"
 
     text_fname = {"en": os.path.join(input_dir, "train.en"), "fr": os.path.join(input_dir, "train.es")}
 
@@ -147,7 +152,7 @@ elif DATASET == "CALLHOME_WORD":
 
     EXP_NAME= "{0:s}_callhome_es_en".format(EXP_NAME_PREFIX)
 
-    bucket_data_fname = os.path.join(model_dir, "buckets_{0:d}.list")
+    bucket_data_fname = os.path.join(model_dir, "buckets_{0:d}.list" if not CHAR_LEVEL else "buckets_{0:d}_char.list")
 
     if os.path.exists(w2i_path):
         w2i = pickle.load(open(w2i_path, "rb"))
@@ -176,7 +181,7 @@ use_attn = SOFT_ATTN
 hidden_units = 512
 
 load_existing_model = True
-create_buckets_flag = False
+create_buckets_flag = True
 #---------------------------------------------------------------------
 # Training Parameters
 #---------------------------------------------------------------------
@@ -197,7 +202,7 @@ NUM_EPOCHS = 0
 # GPU/CPU
 #---------------------------------------------------------------------
 # if >= 0, use GPU, if negative use CPU
-gpuid = 1
+gpuid = 0
 #---------------------------------------------------------------------
 # Log file details
 #---------------------------------------------------------------------
